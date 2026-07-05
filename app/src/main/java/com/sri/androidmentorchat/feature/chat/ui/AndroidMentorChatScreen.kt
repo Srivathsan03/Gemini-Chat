@@ -51,7 +51,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sri.androidmentorchat.R
-import com.sri.androidmentorchat.core.database.MessageEntity
 import com.sri.androidmentorchat.core.model.Agent
 import com.sri.androidmentorchat.core.model.AgentType
 import com.sri.androidmentorchat.core.model.ChatHistory
@@ -67,7 +66,6 @@ fun AndroidMentorChatScreen(
 ) {
     val chatSession by viewModel.chatSession.collectAsStateWithLifecycle()
     val isChatClearable by viewModel.isChatClearable.collectAsStateWithLifecycle()
-    val messages by viewModel.messages.collectAsStateWithLifecycle()
     val selectedAgent by viewModel.selectedAgent.collectAsStateWithLifecycle()
     val difficultyLevel by viewModel.difficultyLevel.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -75,7 +73,6 @@ fun AndroidMentorChatScreen(
     AndroidMentorChatScreenUi(
         chatSession = chatSession,
         isChatClearable = isChatClearable,
-        messages = messages,
         selectedAgent = selectedAgent,
         difficultyLevel = difficultyLevel,
         snackbarHostState = snackbarHostState,
@@ -83,7 +80,6 @@ fun AndroidMentorChatScreen(
         onSendMessage = viewModel::sendMessage,
         onSelectAgent = viewModel::selectAgent,
         onSelectDifficulty = viewModel::selectDifficulty,
-        onUpdateChatSession = viewModel::updateChatSession,
         showShareDialog = viewModel::showShareDialog
     )
     ShareToMoltbookDialog(
@@ -97,7 +93,6 @@ fun AndroidMentorChatScreen(
 fun AndroidMentorChatScreenUi(
     chatSession: ChatSession,
     isChatClearable: Boolean,
-    messages: List<MessageEntity>,
     selectedAgent: Agent,
     difficultyLevel: DifficultyLevel?,
     snackbarHostState: SnackbarHostState,
@@ -105,8 +100,7 @@ fun AndroidMentorChatScreenUi(
     onSendMessage: (String) -> Unit,
     onSelectAgent: (AgentType) -> Unit,
     onSelectDifficulty: (DifficultyLevel) -> Unit,
-    onUpdateChatSession: (List<ChatHistory>) -> Unit,
-    showShareDialog:() -> Unit,
+    showShareDialog: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
@@ -175,13 +169,11 @@ fun AndroidMentorChatScreenUi(
         AndroidMentorChatScreenContent(
             modifier = Modifier.padding(innerPadding),
             chatSession = chatSession,
-            messages = messages,
             selectedAgent = selectedAgent,
             difficultyLevel = difficultyLevel,
             onSendMessage = onSendMessage,
             onSelectAgent = onSelectAgent,
-            onSelectDifficulty = onSelectDifficulty,
-            onUpdateChatSession = onUpdateChatSession
+            onSelectDifficulty = onSelectDifficulty
         )
     }
 }
@@ -190,20 +182,18 @@ fun AndroidMentorChatScreenUi(
 fun AndroidMentorChatScreenContent(
     modifier: Modifier = Modifier,
     chatSession: ChatSession,
-    messages: List<MessageEntity>,
     selectedAgent: Agent,
     difficultyLevel: DifficultyLevel?,
     onSendMessage: (String) -> Unit,
     onSelectAgent: (AgentType) -> Unit,
-    onSelectDifficulty: (DifficultyLevel) -> Unit,
-    onUpdateChatSession: (List<ChatHistory>) -> Unit
+    onSelectDifficulty: (DifficultyLevel) -> Unit
 ) {
     Column(
         modifier = modifier
             .fillMaxSize()
             .imePadding()
     ) {
-        var chatHistoryList = chatSession.messages
+        val chatHistoryList = chatSession.messages
         val listState = rememberLazyListState()
 
         LaunchedEffect(chatHistoryList.size) {
@@ -231,19 +221,6 @@ fun AndroidMentorChatScreenContent(
                 .weight(1f)
                 .fillMaxSize()
         ) {
-            if (agentType == AgentType.ANDROID_MENTOR && chatHistoryList.isEmpty()) {
-                chatHistoryList = messages.map { message ->
-                    ChatHistory(
-                        senderType = SenderType.valueOf(message.sender),
-                        message = message.message
-                    )
-                }
-                listState.requestScrollToItem(
-                    index = chatHistoryList.size,
-                    scrollOffset = Int.MAX_VALUE
-                )
-                onUpdateChatSession(chatHistoryList)
-            }
             items(chatHistoryList.size) { index ->
                 val chatHistory = chatHistoryList[index]
                 val isGemini = chatHistory.senderType == SenderType.GEMINI
@@ -407,7 +384,6 @@ fun Preview_Chat() {
                 )
             ),
             isChatClearable = true,
-            messages = emptyList(),
             selectedAgent = AgentType.ANDROID_MENTOR.agent,
             difficultyLevel = DifficultyLevel.BEGINNER,
             snackbarHostState = remember { SnackbarHostState() },
@@ -415,7 +391,6 @@ fun Preview_Chat() {
             onSendMessage = {},
             onSelectAgent = {},
             onSelectDifficulty = {},
-            onUpdateChatSession = {},
             showShareDialog = {}
         )
     }

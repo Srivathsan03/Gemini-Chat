@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -81,6 +82,22 @@ class AndroidMentorChatViewModel(
     private val _shareDialogVisible = MutableStateFlow(false)
     val shareDialogVisible: StateFlow<Boolean> = _shareDialogVisible.asStateFlow()
 
+    init {
+        loadHistory()
+    }
+
+    private fun loadHistory() {
+        viewModelScope.launch {
+            val dbMessages = chatHistoryRepository.getAllMessages().first()
+            if (dbMessages.isNotEmpty()) {
+                val history = dbMessages.map {
+                    ChatHistory(SenderType.valueOf(it.sender), it.message)
+                }
+                _chatSession.update { it.copy(messages = history) }
+            }
+        }
+    }
+
     fun selectAgent(agentType: AgentType) {
         _selectedAgent.value = agentType.agent
         _difficultyLevel.value =
@@ -90,6 +107,9 @@ class AndroidMentorChatViewModel(
             chatId = UUID.randomUUID().toString(),
             messages = listOf()
         )
+        if (agentType == AgentType.ANDROID_MENTOR) {
+            loadHistory()
+        }
         chatRunner = ChatRunner(
             repository = geminiRepository,
             agent = agentType.agent
@@ -157,11 +177,13 @@ class AndroidMentorChatViewModel(
     }
 
     fun clearChatSession() {
-        clearChat()
-        _chatSession.value = ChatSession(
-            chatId = UUID.randomUUID().toString(),
-            messages = listOf()
-        )
+        viewModelScope.launch {
+            chatHistoryRepository.clearChat()
+            _chatSession.value = ChatSession(
+                chatId = UUID.randomUUID().toString(),
+                messages = listOf()
+            )
+        }
     }
 
     val messages = chatHistoryRepository.getAllMessages()
@@ -179,12 +201,6 @@ class AndroidMentorChatViewModel(
                 timeStamp = System.currentTimeMillis()
             )
             chatHistoryRepository.insertMessages(messageEntity)
-        }
-    }
-
-    fun clearChat() {
-        viewModelScope.launch {
-            chatHistoryRepository.clearChat()
         }
     }
 
