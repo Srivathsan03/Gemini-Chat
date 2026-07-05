@@ -21,11 +21,9 @@ import com.sri.androidmentorchat.feature.chat.domain.ChatRunner
 import com.sri.androidmentorchat.feature.moltbook.data.MoltbookRepository
 import com.sri.androidmentorchat.feature.moltbook.domain.CreatePostUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -126,12 +124,6 @@ class AndroidMentorChatViewModel(
         }
     }
 
-    fun updateChatSession(chatHistoryList: List<ChatHistory>) {
-        _chatSession.update {
-            it.copy(messages = chatHistoryList)
-        }
-    }
-
     fun sendMessage(prompt: String) {
         val userMessage = ChatHistory(senderType = SenderType.USER, message = prompt)
         _chatSession.update { it.copy(messages = it.messages + userMessage) }
@@ -185,13 +177,6 @@ class AndroidMentorChatViewModel(
             )
         }
     }
-
-    val messages = chatHistoryRepository.getAllMessages()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5000),
-            initialValue = emptyList()
-        )
 
     fun saveMessage(text: String, sender: String) {
         viewModelScope.launch {
